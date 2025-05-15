@@ -66,7 +66,15 @@ async function run() {
 
 
 
-        // ADMIN APIS 
+        // ADMIN APIS  ---------------------------------------------------
+
+        // Get  Profile 
+        app.get('/profile/:email', async (req, res) => {
+            const email = req.params.email
+            const query = { email }
+            const result = await usersCollection.findOne(query)
+            res.send(result)
+        })
         // add a camp 
         app.post('/camps', async (req, res) => {
             const campDetails = req.body
