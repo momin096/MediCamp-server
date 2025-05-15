@@ -74,6 +74,12 @@ async function run() {
             res.send(result)
         })
 
+        // get all camps
+        app.get('/camps', async (req, res) => {
+            const result = await campsCollection.find().toArray()
+            res.send(result)
+        })
+
 
 
 
