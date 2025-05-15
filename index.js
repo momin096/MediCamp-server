@@ -13,7 +13,10 @@ const port = process.env.PORT || 5000;
 
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+}));
 app.use(express.json());
 
 
@@ -36,6 +39,7 @@ async function run() {
         const db = client.db('MediCamp')
 
         const usersCollection = db.collection('users');
+        const campsCollection = db.collection('camps');
 
         // generate json web token 
         app.post('/jwt', async (req, res) => {
@@ -57,6 +61,16 @@ async function run() {
                 ...user,
                 role: 'Participant',
             })
+            res.send(result)
+        })
+
+
+
+        // ADMIN APIS 
+        // add a camp 
+        app.post('/camps', async (req, res) => {
+            const campDetails = req.body
+            const result = await campsCollection.insertOne(campDetails)
             res.send(result)
         })
 
