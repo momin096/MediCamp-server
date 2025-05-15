@@ -88,6 +88,26 @@ async function run() {
             res.send(result)
         })
 
+        // // update a camp
+        app.patch('/camps/:id', async (req, res) => {
+            const id = req.params.id
+            const data = req.body
+            const query = { _id: new ObjectId(id) }
+            const updatedDoc = {
+                $set: data
+            }
+            const result = await campsCollection.updateOne(query, updatedDoc)
+            res.send(result)
+        })
+
+        // get a specific camp 
+        app.get('/camps/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const result = await campsCollection.findOne(query)
+            res.send(result)
+        })
+
 
 
 
