@@ -63,11 +63,6 @@ async function run() {
             })
             res.send(result)
         })
-
-
-
-        // ADMIN APIS  ---------------------------------------------------
-
         // Get  Profile 
         app.get('/profile/:email', async (req, res) => {
             const email = req.params.email
@@ -75,6 +70,24 @@ async function run() {
             const result = await usersCollection.findOne(query)
             res.send(result)
         })
+
+        // update a profile in db 
+        app.patch('/update-profile/:email', async (req, res) => {
+            const email = req.params.email
+            const query = { email }
+            const updatedData = req.body
+            const updatedDoc = {
+                $set: updatedData
+            }
+            const result = await usersCollection.updateOne(query, updatedDoc)
+            res.send(result)
+        })
+
+
+
+        // ADMIN APIS  ---------------------------------------------------
+
+
         // add a camp 
         app.post('/camps', async (req, res) => {
             const campDetails = req.body
