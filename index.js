@@ -40,6 +40,7 @@ async function run() {
 
         const usersCollection = db.collection('users');
         const campsCollection = db.collection('camps');
+        const registrationsCollection = db.collection('registrations');
 
         // generate json web token 
         app.post('/jwt', async (req, res) => {
@@ -80,6 +81,31 @@ async function run() {
                 $set: updatedData
             }
             const result = await usersCollection.updateOne(query, updatedDoc)
+            res.send(result)
+        })
+
+
+
+        // camp related apis ----------------------------------------
+
+        // add a camp registrations and increase the participants count 
+        app.post('/registrations', async (req, res) => {
+            const registration = req.body;
+            const result = await registrationsCollection.insertOne(registration);
+
+            // Increment participant count
+            const campId = registration.campId;
+            await campsCollection.updateOne(
+                { _id: new ObjectId(campId) },
+                { $inc: { participants: 1 } }
+            );
+
+            res.send(result);
+        });
+
+        // get all registered camps by email 
+        app.get('/registered-camps', async (req, res) => {
+            const result = await registrationsCollection.find().toArray()
             res.send(result)
         })
 
