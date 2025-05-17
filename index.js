@@ -1,5 +1,3 @@
-
-
 require("dotenv").config();
 const express = require('express');
 const cors = require('cors');
@@ -90,25 +88,48 @@ async function run() {
 
         // add a camp registrations and increase the participants count 
         app.post('/registrations', async (req, res) => {
-            const registration = req.body;
-            const result = await registrationsCollection.insertOne(registration);
+            const registration = req.body
+            const result = await registrationsCollection.insertOne(registration)
 
             // Increment participant count
-            const campId = registration.campId;
-            await campsCollection.updateOne(
-                { _id: new ObjectId(campId) },
-                { $inc: { participants: 1 } }
-            );
-
-            res.send(result);
+            const campId = registration.campId
+            const filter = { _id: new ObjectId(campId) }
+            await campsCollection.updateOne(filter, { $inc: { participants: 1 } })
+            res.send(result)
         });
 
         // get all registered camps by email 
         app.get('/registered-camps', async (req, res) => {
-            const result = await registrationsCollection.find().toArray()
+            const email = req.query.email;
+
+            let query = {};
+            if (email) {
+                query = { participantEmail: email };
+            }
+
+            const result = await registrationsCollection.find(query).toArray();
+            res.send(result);
+        })
+
+
+        // cancel / delete registered camp
+        app.delete('/delete-registered-camp/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const result = await registrationsCollection.deleteOne(query)
             res.send(result)
         })
 
+        // update status 
+        app.patch('/change-status/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const updatedDoc = {
+                $set: { status: 'Confirmed' }
+            }
+            const result = await registrationsCollection.updateOne(query, updatedDoc)
+            res.send(result)
+        })
 
 
         // ADMIN APIS  ---------------------------------------------------
