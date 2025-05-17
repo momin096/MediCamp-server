@@ -41,6 +41,7 @@ async function run() {
         const usersCollection = db.collection('users');
         const campsCollection = db.collection('camps');
         const registrationsCollection = db.collection('registrations');
+        const paymentsCollection = db.collection('payments');
 
         // generate json web token 
         app.post('/jwt', async (req, res) => {
@@ -132,8 +133,7 @@ async function run() {
             const result = await registrationsCollection.updateOne(query, updatedDoc)
             res.send(result)
         })
-
-        // PATCH /registered-camps/payment/:id
+        // change payment status
         app.patch('/registered-camps/payment/:id', async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
@@ -147,7 +147,6 @@ async function run() {
         });
 
 
-        // create payment intent
         // create payment intent
         app.post('/create-payment-intent', async (req, res) => {
             const { price } = req.body;
@@ -171,6 +170,14 @@ async function run() {
             }
         });
 
+
+        // insert payment info 
+
+        app.post('/payments', async (req, res) => {
+            const data = req.body
+            const result = await paymentsCollection.insertOne(data)
+            res.send(result)
+        })
 
 
         // ADMIN APIS  ---------------------------------------------------
