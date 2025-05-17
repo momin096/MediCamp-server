@@ -2,8 +2,10 @@ require("dotenv").config();
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_kEY);
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { parse } = require("dotenv");
 
 
 const app = express();
@@ -12,7 +14,7 @@ const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'https://medicamp-d8e07.web.app'],
     credentials: true,
 }));
 app.use(express.json());
@@ -130,6 +132,45 @@ async function run() {
             const result = await registrationsCollection.updateOne(query, updatedDoc)
             res.send(result)
         })
+
+        // PATCH /registered-camps/payment/:id
+        app.patch('/registered-camps/payment/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const updatedDoc = {
+                $set: {
+                    payment: 'Paid'
+                }
+            }
+            const result = await registrationsCollection.updateOne(query, updatedDoc);
+            res.send(result);
+        });
+
+
+        // create payment intent
+        // create payment intent
+        app.post('/create-payment-intent', async (req, res) => {
+            const { price } = req.body;
+            const priceNumber = parseInt(price);
+
+            const amount = priceNumber * 100
+
+            try {
+                const { client_secret } = await stripe.paymentIntents.create({
+                    amount,
+                    currency: 'usd',
+                    automatic_payment_methods: {
+                        enabled: true,
+                    },
+                });
+
+                res.send({ clientSecret: client_secret });
+            } catch (error) {
+                console.error("Stripe error:", error.message);
+                res.status(500).send({ error: error.message });
+            }
+        });
+
 
 
         // ADMIN APIS  ---------------------------------------------------
