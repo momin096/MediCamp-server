@@ -82,6 +82,23 @@ async function run() {
         }
 
 
+        // Assuming Camp is your model
+        app.get('/top-camps', async (req, res) => {
+            try {
+                const popularCamps = await campsCollection.find()
+                    .sort({ participants: -1 }) // sort descending by participants
+                    .limit(6).toArray()// limit to 6 results
+
+                res.send(popularCamps);
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({ message: 'Failed to fetch popular camps' });
+            }
+        })
+
+
+
+
         // users related apis --------------------------------------------
         app.post('/users/:email', async (req, res) => {
             const email = req.params.email
@@ -130,7 +147,7 @@ async function run() {
         // camp related apis ----------------------------------------
 
         // add a camp registrations and increase the participants count 
-        app.post('/registrations', async (req, res) => {
+        app.post('/registrations', verifyToken, async (req, res) => {
             const registration = req.body
             const result = await registrationsCollection.insertOne(registration)
 
@@ -142,7 +159,7 @@ async function run() {
         });
 
         // get all registered camps by email 
-        app.get('/registered-camps', async (req, res) => {
+        app.get('/registered-camps', verifyToken, async (req, res) => {
             const email = req.query.email;
 
             let query = {};
@@ -156,7 +173,7 @@ async function run() {
 
 
         // cancel / delete registered camp
-        app.delete('/delete-registered-camp/:id', async (req, res) => {
+        app.delete('/delete-registered-camp/:id', verifyToken, verifyOrganizer, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const result = await registrationsCollection.deleteOne(query)
@@ -164,7 +181,7 @@ async function run() {
         })
 
         // update status 
-        app.patch('/change-status/:id', async (req, res) => {
+        app.patch('/change-status/:id', verifyToken, verifyOrganizer, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const updatedDoc = {
@@ -174,7 +191,7 @@ async function run() {
             res.send(result)
         })
         // change payment status
-        app.patch('/registered-camps/payment/:id', async (req, res) => {
+        app.patch('/registered-camps/payment/:id', verifyToken, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const updatedDoc = {
@@ -188,7 +205,7 @@ async function run() {
 
 
         // create payment intent
-        app.post('/create-payment-intent', async (req, res) => {
+        app.post('/create-payment-intent', verifyToken, async (req, res) => {
             const { price } = req.body;
             const priceNumber = parseInt(price);
 
@@ -212,14 +229,13 @@ async function run() {
 
 
         // insert payment info 
-
-        app.post('/payments', async (req, res) => {
+        app.post('/payments', verifyToken, async (req, res) => {
             const data = req.body
             const result = await paymentsCollection.insertOne(data)
             res.send(result)
         })
 
-        app.get('/payment-history', async (req, res) => {
+        app.get('/payment-history', verifyToken, async (req, res) => {
             const email = req.query.email;
             const query = { email: email };
             const result = await paymentsCollection.aggregate([
@@ -264,7 +280,7 @@ async function run() {
 
 
         // add a camp 
-        app.post('/camps', async (req, res) => {
+        app.post('/camps', verifyToken, verifyOrganizer, async (req, res) => {
             const campDetails = req.body
             const result = await campsCollection.insertOne(campDetails)
             res.send(result)
@@ -277,7 +293,7 @@ async function run() {
         })
 
         // delete a camp 
-        app.delete('/camps/:id', async (req, res) => {
+        app.delete('/camps/:id', verifyToken, verifyOrganizer, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const result = await campsCollection.deleteOne(query)
@@ -285,7 +301,7 @@ async function run() {
         })
 
         // // update a camp
-        app.patch('/camps/:id', async (req, res) => {
+        app.patch('/camps/:id', verifyToken, verifyOrganizer, async (req, res) => {
             const id = req.params.id
             const data = req.body
             const query = { _id: new ObjectId(id) }
