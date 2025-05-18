@@ -179,6 +179,46 @@ async function run() {
             res.send(result)
         })
 
+        app.get('/payment-history', async (req, res) => {
+            const email = req.query.email;
+            const query = { email: email };
+            const result = await paymentsCollection.aggregate([
+                {
+                    $match: query,
+                },
+                {
+                    $addFields: {
+                        campId: { $toObjectId: '$campId' }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'registrations',
+                        localField: 'campId',
+                        foreignField: '_id',
+                        as: 'registrationsInfo'
+                    }
+                },
+                {
+                    $unwind: '$registrationsInfo'
+                },
+                {
+                    $addFields: {
+                        campName: '$registrationsInfo.campName',
+                        campFees: '$registrationsInfo.campFees',
+                        status: '$registrationsInfo.status'
+                    }
+                },
+                {
+                    $project: {
+                        registrationsInfo: 0,
+                    }
+                }
+            ]).toArray()
+            res.send(result);
+        });
+
+
 
         // ADMIN APIS  ---------------------------------------------------
 
