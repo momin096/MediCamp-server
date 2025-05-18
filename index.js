@@ -45,7 +45,7 @@ async function run() {
         // generate json web token 
         app.post('/jwt', async (req, res) => {
             const user = req.body;
-            const token = jwt.sign(user, process.env.SECRET_KEY, { expiresIn: '1h' });
+            const token = jwt.sign(user, process.env.SECRET_KEY, { expiresIn: '1d' });
             res.send({ token });
         })
 
@@ -55,8 +55,7 @@ async function run() {
             if (!req.headers.authorization) {
                 return res.status(401).send({ message: 'Forbidden access' });
             }
-
-            const token = req.headers.authorization.split(' ')[1];
+            const token = req.headers.authorization?.split(' ')[1];
             if (!token) {
                 return res.status(401).send({ message: 'Forbidden access' });
             }
@@ -72,17 +71,18 @@ async function run() {
 
 
         const verifyOrganizer = async (req, res, next) => {
-            const email = req?.user?.email;
-            const query = { email }
-            const user = await usersCollection.findOne(query)
+            const email = req?.decoded?.email;
+            const query = { email };
+            const user = await usersCollection.findOne(query);
 
-            if (!user || user?.role !== 'Organizer') return res.status(401).send({ message: 'UnAuthorize Access' })
+            if (!user || user?.role !== 'Organizer') {
+                return res.status(401).send({ message: 'UnAuthorize Access' });
+            }
 
-            next()
-        }
+            next();
+        };
 
 
-        // Assuming Camp is your model
         app.get('/top-camps', async (req, res) => {
             const popularCamps = await campsCollection.find()
                 .sort({ participants: -1 })
@@ -110,7 +110,7 @@ async function run() {
             res.send(result)
         })
         // Get  Profile 
-        app.get('/profile/:email', async (req, res) => {
+        app.get('/profile/:email', verifyToken, async (req, res) => {
             const email = req.params.email
             const query = { email }
             const result = await usersCollection.findOne(query)
@@ -118,7 +118,7 @@ async function run() {
         })
 
         // update a profile in db 
-        app.patch('/update-profile/:email', async (req, res) => {
+        app.patch('/update-profile/:email', verifyToken, async (req, res) => {
             const email = req.params.email
             const query = { email }
             const updatedData = req.body
@@ -136,7 +136,7 @@ async function run() {
             const result = await usersCollection.findOne(query)
             res.send({ role: result?.role })
         })
-      
+
 
 
 
@@ -155,7 +155,7 @@ async function run() {
         });
 
         // get all registered camps by email 
-        app.get('/registered-camps', async (req, res) => {
+        app.get('/registered-camps', verifyToken, async (req, res) => {
             const email = req.query.email;
 
             let query = {};
@@ -169,7 +169,7 @@ async function run() {
 
 
         // cancel / delete registered camp
-        app.delete('/delete-registered-camp/:id', async (req, res) => {
+        app.delete('/delete-registered-camp/:id', verifyToken, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const result = await registrationsCollection.deleteOne(query)
@@ -187,7 +187,7 @@ async function run() {
             res.send(result)
         })
         // change payment status
-        app.patch('/registered-camps/payment/:id', async (req, res) => {
+        app.patch('/registered-camps/payment/:id', verifyToken, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const updatedDoc = {
@@ -225,13 +225,13 @@ async function run() {
 
 
         // insert payment info 
-        app.post('/payments', async (req, res) => {
+        app.post('/payments', verifyToken, async (req, res) => {
             const data = req.body
             const result = await paymentsCollection.insertOne(data)
             res.send(result)
         })
 
-        app.get('/payment-history', async (req, res) => {
+        app.get('/payment-history', verifyToken, async (req, res) => {
             const email = req.query.email;
             const query = { email: email };
             const result = await paymentsCollection.aggregate([
@@ -276,7 +276,7 @@ async function run() {
 
 
         // add a camp 
-        app.post('/camps', async (req, res) => {
+        app.post('/camps', verifyToken, verifyOrganizer, async (req, res) => {
             const campDetails = req.body
             const result = await campsCollection.insertOne(campDetails)
             res.send(result)
@@ -289,7 +289,7 @@ async function run() {
         })
 
         // delete a camp 
-        app.delete('/camps/:id', async (req, res) => {
+        app.delete('/camps/:id', verifyToken, verifyOrganizer, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const result = await campsCollection.deleteOne(query)
@@ -297,7 +297,7 @@ async function run() {
         })
 
         // // update a camp
-        app.patch('/camps/:id', async (req, res) => {
+        app.patch('/camps/:id', verifyToken, verifyOrganizer, async (req, res) => {
             const id = req.params.id
             const data = req.body
             const query = { _id: new ObjectId(id) }
@@ -309,7 +309,7 @@ async function run() {
         })
 
         // get a specific camp 
-        app.get('/camps/:id', async (req, res) => {
+        app.get('/camps/:id', verifyToken, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const result = await campsCollection.findOne(query)
@@ -321,8 +321,8 @@ async function run() {
 
 
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
@@ -336,5 +336,5 @@ app.get('/', (req, res) => {
 })
 
 app.listen(port, () => {
-    console.log(`Boss is running on port: ${port}`)
+    console.log(`Camp is running on port: ${port}`)
 })
