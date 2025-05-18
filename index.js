@@ -50,6 +50,38 @@ async function run() {
             res.send({ token });
         })
 
+        // verifyJWT middleware
+        const verifyToken = (req, res, next) => {
+            // console.log('inside verify token', req?.headers?.authorization);
+            if (!req.headers.authorization) {
+                res.status(401).send({ message: 'Forbidden access' })
+            }
+
+            const token = req.headers.authorization.split(' ')[1];
+            if (!token) {
+                return res.status(401).send({ message: 'Forbidden access' })
+            }
+
+            jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
+                if (err) {
+                    return res.status(401).send({ message: 'Forbidden access' })
+                }
+                req.decoded = decoded;
+                next();
+            })
+        }
+
+        const verifyOrganizer = async (req, res, next) => {
+            const email = req?.user?.email;
+            const query = { email }
+            const user = await usersCollection.findOne(query)
+
+            if (!user || user?.role !== 'Organizer') return res.status(401).send({ message: 'UnAuthorize Access' })
+
+            next()
+        }
+
+
         // users related apis --------------------------------------------
         app.post('/users/:email', async (req, res) => {
             const email = req.params.email
@@ -66,7 +98,7 @@ async function run() {
             res.send(result)
         })
         // Get  Profile 
-        app.get('/profile/:email', async (req, res) => {
+        app.get('/profile/:email', verifyToken, async (req, res) => {
             const email = req.params.email
             const query = { email }
             const result = await usersCollection.findOne(query)
@@ -74,7 +106,7 @@ async function run() {
         })
 
         // update a profile in db 
-        app.patch('/update-profile/:email', async (req, res) => {
+        app.patch('/update-profile/:email', verifyToken, async (req, res) => {
             const email = req.params.email
             const query = { email }
             const updatedData = req.body
@@ -83,6 +115,14 @@ async function run() {
             }
             const result = await usersCollection.updateOne(query, updatedDoc)
             res.send(result)
+        })
+
+        // get a user role   
+        app.get('/users/role/:email', verifyToken, async (req, res) => {
+            const email = req.params.email
+            const query = { email }
+            const result = await usersCollection.findOne(query)
+            res.send({ role: result?.role })
         })
 
 
